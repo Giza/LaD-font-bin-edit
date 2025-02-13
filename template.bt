@@ -1,0 +1,98 @@
+//------------------------------------------------
+//--- 010 Editor Binary Template
+//
+//      File: template.bt
+//   Authors: 
+//   Version: 1.0
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+LittleEndian(); // Set byte order as Little Endian
+
+// Main data structure
+typedef struct {
+    byte skip1[24];           // Skip first 24 bytes
+    uint32 symbolsEndOffset;  // End of symbols offset (4 bytes)
+    uint32 skip2;            // Skip 4 bytes
+    uint32 symbolsStartOffset; // Start of symbols offset (4 bytes)
+    byte skip3[12];          // Skip 12 bytes
+    uint32 unknown1;         // Unknown offset 1 (end of float data)
+    uint32 skip4;            // Skip 4 bytes
+    uint32 unknown2;         // Unknown offset 2 (start of float data)
+    uint32 skip5;            // Skip 4 bytes
+    uint32 unknown3;         // Unknown offset 3
+    uint32 skip6;            // Skip 4 bytes
+    uint32 unknown4;         // Unknown offset 4
+} HEADER;
+
+// Read header
+HEADER header;
+
+// Move to symbols start position
+FSeek(header.symbolsStartOffset);
+
+// Read symbols
+local uint32 i;
+local uint32 symbolCount = ((header.symbolsEndOffset+28) - header.symbolsStartOffset) / 4;
+
+typedef struct {
+    uint32 symbol;
+} SYMBOL <read=SymbolToString>;
+
+string SymbolToString(SYMBOL &s) {
+    string str;
+    SPrintf(str, "0x%X (%c)", s.symbol, (char)s.symbol);
+    return str;
+}
+
+struct {
+    SYMBOL symbols[symbolCount];
+} SYMBOLS;
+
+// Texture information
+typedef struct {
+    uint32 skip;             // Skip 4 bytes
+    uint32 unknown_data;     // Unknown data (4 bytes)
+    uint32 texture_width;    // Texture width
+    uint32 texture_height;   // Texture height
+    uint16 unknown_short1;   // Unknown value 1 (2 bytes)
+    uint16 unknown_short2;   // Unknown value 2 (2 bytes)
+} TEXTURE_INFO;
+
+TEXTURE_INFO textureInfo;
+
+// Move to float data position
+FSeek(header.unknown2);
+
+// Calculate number of characters with coordinates
+local uint32 coordCount = (header.unknown1 - header.unknown2) / 16; // 16 = 4 floats * 4 bytes
+
+// Character coordinates structure
+typedef struct {
+    struct {
+        float x;
+        float y;
+    } start;
+    struct {
+        float x;
+        float y;
+    } end;
+} CHAR_COORDS <read=CoordsToString>;
+
+string CoordsToString(CHAR_COORDS &c) {
+    local uint32 index = (startof(c) - header.unknown2) / 16;
+    string str;
+    SPrintf(str, "'%c' (0x%X) - Start(%.2f, %.2f) End(%.2f, %.2f)", 
+            (char)SYMBOLS.symbols[index].symbol,
+            SYMBOLS.symbols[index].symbol,
+            c.start.x, c.start.y, c.end.x, c.end.y);
+    return str;
+}
+
+struct {
+    CHAR_COORDS coordinates[coordCount];
+} CHAR_POSITIONS; 
