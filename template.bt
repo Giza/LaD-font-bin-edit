@@ -95,4 +95,27 @@ string CoordsToString(CHAR_COORDS &c) {
 
 struct {
     CHAR_COORDS coordinates[coordCount];
-} CHAR_POSITIONS; 
+} CHAR_POSITIONS;
+
+// Additional data structure (5 uint16 values per symbol)
+typedef struct {
+    uint16 value1;
+    uint16 value2;
+    uint16 value3;
+    uint16 value4;
+    uint16 value5;
+} ADDITIONAL_DATA <read=AdditionalDataToString>;
+
+string AdditionalDataToString(ADDITIONAL_DATA &d) {
+    local uint32 index = (startof(d) - startof(SYMBOL_ADDITIONAL_DATA.data)) / sizeof(ADDITIONAL_DATA);
+    string str;
+    SPrintf(str, "'%c' (0x%X) - Values: %d, %d, %d, %d, %d", 
+            (char)SYMBOLS.symbols[index].symbol,
+            SYMBOLS.symbols[index].symbol,
+            d.value1, d.value2, d.value3, d.value4, d.value5);
+    return str;
+}
+
+struct {
+    ADDITIONAL_DATA data[coordCount];
+} SYMBOL_ADDITIONAL_DATA; 
